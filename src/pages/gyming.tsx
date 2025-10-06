@@ -1,5 +1,6 @@
 import React from 'react'   
 import CustomCalendar from '../components/CustomCalendar'
+import NavigationDock from '../components/NavigationDock'
 
 const Gyming = () => {
   return (
@@ -23,6 +24,9 @@ const Gyming = () => {
           <span className="text-red-600">M</span>
           <span className="text-black">ING</span>
         </h1>
+        
+        {/* Navigation Dock */}
+        <NavigationDock />
     </div>
     
   )

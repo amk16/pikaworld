@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import PikachuLoading from './PikachuLoading'
 import {GokuButton, KratosButton, DeskButton} from './Buttons.tsx'
+import MinimalAuth from './MinimalAuth'
 
 const MainPage = () => {
   const [isLoading, setIsLoading] = useState(true)
@@ -12,6 +13,7 @@ const MainPage = () => {
 
   return (
     <div className="min-h-screen bg-[#ffeabb]">
+      <MinimalAuth />
       {isLoading ? (
         <PikachuLoading onLoadingComplete={handleLoadingComplete} />
       ) : (

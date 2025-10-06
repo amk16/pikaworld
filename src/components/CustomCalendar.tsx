@@ -1,20 +1,19 @@
-import React, { useState } from 'react'
-
-interface DateData {
-  exercises: Array<{
-    exercise: string
-    reps: string
-    sets: string
-    completed: boolean
-  }>
-}
+import React, { useState, useEffect } from 'react'
+import { dataService, type DateData, type Exercise } from '../services/dataService'
+import DataManager from './DataManager'
 
 const CustomCalendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<number | null>(null)
   const [isMinimized, setIsMinimized] = useState(false)
-  const [dateData, setDateData] = useState<Record<string, DateData>>({})
   const [isEditing, setIsEditing] = useState(false)
+  const [showDataManager, setShowDataManager] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
+  
+  // Force re-render when refreshTrigger changes
+  useEffect(() => {
+    // This effect will run whenever refreshTrigger changes, forcing a re-render
+  }, [refreshTrigger])
   
   // Get the first day of the month and number of days
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
@@ -71,31 +70,77 @@ const CustomCalendar = () => {
     setIsEditing(false)
   }
 
-  // Generate unique key for date
-  const getDateKey = (day: number) => {
-    return `${currentDate.getFullYear()}-${currentDate.getMonth()}-${day}`
-  }
-
   // Get data for specific date
   const getDateData = (day: number): DateData => {
-    const key = getDateKey(day)
-    return dateData[key] || {
-      exercises: []
-    }
+    return dataService.getDateData(currentDate.getFullYear(), currentDate.getMonth(), day)
   }
 
   // Save data for specific date
   const saveDateData = (day: number, data: DateData) => {
-    const key = getDateKey(day)
-    setDateData(prev => ({
-      ...prev,
-      [key]: data
-    }))
+    dataService.saveDateData(currentDate.getFullYear(), currentDate.getMonth(), day, data)
   }
 
   // Toggle editing mode
   const toggleEditing = () => {
     setIsEditing(!isEditing)
+  }
+
+  // Add exercise row function
+  const addExerciseRow = () => {
+    if (!selectedDate) return
+    
+    const currentData = getDateData(selectedDate)
+    const newExercises = [...currentData.exercises, { exercise: '', reps: '', sets: '', weight: '', time: '', completed: false }]
+    saveDateData(selectedDate, { 
+      ...currentData,
+      exercises: newExercises 
+    })
+    // Trigger re-render
+    setRefreshTrigger(prev => prev + 1)
+  }
+
+  // Update exercise function
+  const updateExercise = (index: number, field: 'exercise' | 'reps' | 'sets' | 'weight' | 'time', value: string) => {
+    if (!selectedDate) return
+    
+    const currentData = getDateData(selectedDate)
+    const newExercises = [...currentData.exercises]
+    newExercises[index][field] = value
+    saveDateData(selectedDate, { 
+      ...currentData,
+      exercises: newExercises 
+    })
+    // Trigger re-render
+    setRefreshTrigger(prev => prev + 1)
+  }
+
+  // Toggle completed function
+  const toggleCompleted = (index: number) => {
+    if (!selectedDate) return
+    
+    const currentData = getDateData(selectedDate)
+    const newExercises = [...currentData.exercises]
+    newExercises[index].completed = !newExercises[index].completed
+    saveDateData(selectedDate, { 
+      ...currentData,
+      exercises: newExercises 
+    })
+    // Trigger re-render
+    setRefreshTrigger(prev => prev + 1)
+  }
+
+  // Remove exercise function
+  const removeExercise = (index: number) => {
+    if (!selectedDate) return
+    
+    const currentData = getDateData(selectedDate)
+    const newExercises = currentData.exercises.filter((_, i) => i !== index)
+    saveDateData(selectedDate, { 
+      ...currentData,
+      exercises: newExercises 
+    })
+    // Trigger re-render
+    setRefreshTrigger(prev => prev + 1)
   }
   
 
@@ -103,29 +148,10 @@ const CustomCalendar = () => {
   const renderSelectedDateContent = () => {
     if (!selectedDate) return null
     
+    // Use refreshTrigger to ensure we get fresh data
     const currentData = getDateData(selectedDate)
     
-    const addExerciseRow = () => {
-      const newExercises = [...currentData.exercises, { exercise: '', reps: '', sets: '', completed: false }]
-      saveDateData(selectedDate, { exercises: newExercises })
-    }
 
-    const updateExercise = (index: number, field: 'exercise' | 'reps' | 'sets', value: string) => {
-      const newExercises = [...currentData.exercises]
-      newExercises[index][field] = value
-      saveDateData(selectedDate, { exercises: newExercises })
-    }
-
-    const toggleCompleted = (index: number) => {
-      const newExercises = [...currentData.exercises]
-      newExercises[index].completed = !newExercises[index].completed
-      saveDateData(selectedDate, { exercises: newExercises })
-    }
-
-    const removeExercise = (index: number) => {
-      const newExercises = currentData.exercises.filter((_, i) => i !== index)
-      saveDateData(selectedDate, { exercises: newExercises })
-    }
 
     return (
       <div className="flex-1 h-full">
@@ -134,51 +160,87 @@ const CustomCalendar = () => {
           {monthNames[currentDate.getMonth()]} {selectedDate}
         </h1>
         
-        {/* Four column layout with check circle */}
+        {/* Five column layout with check circle */}
         <div className="px-8">
           {/* Header row */}
-          <div className="grid gap-0 mb-4" style={{ gridTemplateColumns: '60px 1fr 120px 120px' }}>
-            <div className="p-4 text-center font-bold text-xl"></div>
-            <div className="p-4 text-left font-bold text-xl">Exercise</div>
-            <div className="p-4 text-center font-bold text-xl border-l-2 border-r-2 border-black rounded-sm">Reps</div>
-            <div className="p-4 text-center font-bold text-xl">Sets</div>
+          <div className="grid gap-0" style={{ gridTemplateColumns: '60px 2fr 1fr 1fr 1fr 1fr 60px' }}>
+            <div className="p-3 text-center font-bold text-base border-r-2 border-b-2 border-black"></div>
+            <div className="p-3 text-center font-bold text-base border-r-2 border-b-2 border-black">EXERCISE</div>
+            <div className="p-3 text-center font-bold text-base border-r-2 border-b-2 border-black">REPS</div>
+            <div className="p-3 text-center font-bold text-base border-r-2 border-b-2 border-black">SETS</div>
+            <div className="p-3 text-center font-bold text-base border-r-2 border-b-2 border-black">WEIGHT</div>
+            <div className="p-3 text-center font-bold text-base border-r-2 border-b-2 border-black">TIME</div>
+            <div className="p-3 text-center font-bold text-base border-b-2 border-black">DELETE</div>
           </div>
           
           {/* Exercise rows */}
-          <div className="space-y-2">
+          <div>
             {currentData.exercises.map((exercise, index) => (
-              <div key={index} className="grid gap-0 items-center" style={{ gridTemplateColumns: '60px 1fr 120px 120px' }}>
-                <div className="flex justify-center p-4">
+              <div key={index} className="grid gap-0" style={{ gridTemplateColumns: '60px 2fr 1fr 1fr 1fr 1fr 60px' }}>
+                <div className="flex justify-center items-center p-3 border-r-2 border-b-2 border-black">
                   <button
                     onClick={() => toggleCompleted(index)}
-                    className="w-6 h-6 rounded-full border-2 border-black flex items-center justify-center hover:bg-gray-100 transition-colors duration-200"
+                    className="w-6 h-6 flex items-center justify-center flex-shrink-0"
                   >
                     {exercise.completed && (
                       <span className="text-black text-sm">✓</span>
                     )}
                   </button>
                 </div>
-                <input
-                  type="text"
-                  value={exercise.exercise}
-                  onChange={(e) => updateExercise(index, 'exercise', e.target.value)}
-                  className={`p-4 bg-transparent border-none outline-none text-lg ${exercise.completed ? 'line-through text-gray-500' : ''}`}
-                  placeholder="Exercise name"
-                />
-                <input
-                  type="text"
-                  value={exercise.reps}
-                  onChange={(e) => updateExercise(index, 'reps', e.target.value)}
-                  className={`p-4 bg-transparent border-none outline-none text-lg text-center border-l-2 border-r-2 border-black rounded-sm ${exercise.completed ? 'line-through text-gray-500' : ''}`}
-                  placeholder="Reps"
-                />
-                <input
-                  type="text"
-                  value={exercise.sets}
-                  onChange={(e) => updateExercise(index, 'sets', e.target.value)}
-                  className={`p-4 bg-transparent border-none outline-none text-lg text-center ${exercise.completed ? 'line-through text-gray-500' : ''}`}
-                  placeholder="Sets"
-                />
+                <div className="border-r-2 border-b-2 border-black overflow-hidden">
+                  <input
+                    type="text"
+                    value={exercise.exercise || ''}
+                    onChange={(e) => updateExercise(index, 'exercise', e.target.value)}
+                    className="w-full p-3 bg-transparent border-none outline-none text-base"
+                    placeholder="Exercise name"
+                  />
+                </div>
+                <div className="border-r-2 border-b-2 border-black overflow-hidden">
+                  <input
+                    type="text"
+                    value={exercise.reps || ''}
+                    onChange={(e) => updateExercise(index, 'reps', e.target.value)}
+                    className="w-full p-3 bg-transparent border-none outline-none text-base text-center"
+                    placeholder=""
+                  />
+                </div>
+                <div className="border-r-2 border-b-2 border-black overflow-hidden">
+                  <input
+                    type="text"
+                    value={exercise.sets || ''}
+                    onChange={(e) => updateExercise(index, 'sets', e.target.value)}
+                    className="w-full p-3 bg-transparent border-none outline-none text-base text-center"
+                    placeholder=""
+                  />
+                </div>
+                <div className="border-r-2 border-b-2 border-black overflow-hidden">
+                  <input
+                    type="text"
+                    value={exercise.weight || ''}
+                    onChange={(e) => updateExercise(index, 'weight', e.target.value)}
+                    className="w-full p-3 bg-transparent border-none outline-none text-base text-center"
+                    placeholder=""
+                  />
+                </div>
+                <div className="border-r-2 border-b-2 border-black overflow-hidden">
+                  <input
+                    type="text"
+                    value={exercise.time || ''}
+                    onChange={(e) => updateExercise(index, 'time', e.target.value)}
+                    className="w-full p-3 bg-transparent border-none outline-none text-base text-center"
+                    placeholder=""
+                  />
+                </div>
+                <div className="flex justify-center items-center p-3 border-b-2 border-black">
+                  <button
+                    onClick={() => removeExercise(index)}
+                    className="w-6 h-6 flex items-center justify-center text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                    title="Delete exercise"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -203,10 +265,19 @@ const CustomCalendar = () => {
     <div className="max-w-2xl mx-auto">
       {!isMinimized ? (
         <>
-          {/* Month title */}
-          <h2 className="text-5xl font-bold text-black text-center mb-8 tracking-wider">
-            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-          </h2>
+          {/* Month title and data manager button */}
+          <div className="flex justify-between items-center mb-8">
+            <button
+              onClick={() => setShowDataManager(true)}
+              className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded transition-colors"
+            >
+              📊 Data Manager
+            </button>
+            <h2 className="text-5xl font-bold text-black tracking-wider">
+              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+            </h2>
+            <div className="w-20"></div> {/* Spacer for centering */}
+          </div>
           
           {/* Creative black grid with enhanced borders */}
           <div className="grid grid-cols-7 gap-0 border-4 border-black shadow-2xl bg-transparent rounded-lg overflow-hidden">
@@ -232,9 +303,26 @@ const CustomCalendar = () => {
                   `}
                 >
                   {day && (
-                    <span className="text-2xl font-bold text-black select-none">
-                      {day}
-                    </span>
+                    <>
+                      <span className="text-2xl font-bold text-black select-none">
+                        {day}
+                      </span>
+                      {/* Show indicator if date has data */}
+                      {(() => {
+                        const dateData = getDateData(day)
+                        const hasData = dateData.exercises.length > 0
+                        const hasCompleted = dateData.exercises.some(ex => ex.completed)
+                        return hasData && (
+                          <div className="absolute bottom-1 right-1">
+                            {hasCompleted ? (
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            ) : (
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            )}
+                          </div>
+                        )
+                      })()}
+                    </>
                   )}
                   
                   {/* Decorative corner accents for corner cells */}
@@ -264,6 +352,12 @@ const CustomCalendar = () => {
           {renderSelectedDateContent()}
         </div>
       )}
+      
+      {/* Data Manager Modal */}
+      <DataManager 
+        isOpen={showDataManager} 
+        onClose={() => setShowDataManager(false)} 
+      />
     </div>
   )
 }
