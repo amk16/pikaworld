@@ -4,6 +4,7 @@ import FreeTextWriter from '../components/FreeTextWriter'
 import FreeDrawing from '../components/FreeDrawing'
 import WorkspaceManager from '../components/WorkspaceManager'
 import AutosaveStatus from '../components/SyncStatus'
+import VoiceAssistant from '../components/VoiceAssistant'
 import { enhancedWorkspaceService } from '../services/enhancedWorkspaceService'
 import { Workspace } from '../services/workspaceService'
 
@@ -70,6 +71,37 @@ const Working = () => {
     }
   };
 
+  // Test function to save basic text data under current user ID
+  const testSaveData = async () => {
+    try {
+      console.log('🧪 TEST SAVE - Starting test save...');
+      
+      // Initialize the enhanced workspace service if not already done
+      await enhancedWorkspaceService.initialize();
+      
+      // Get or create a test workspace
+      const testWorkspace = await enhancedWorkspaceService.getOrCreateDefaultWorkspace();
+      console.log('🧪 TEST SAVE - Test workspace ID:', testWorkspace.id);
+      
+      // Hard-coded test text data
+      const testTextData = "This is a hard-coded test string saved under user ID: ";
+      console.log('🧪 TEST SAVE - Test text data:', testTextData);
+      
+      // Save the test data
+      await enhancedWorkspaceService.updateWorkspaceText(testWorkspace.id, testTextData);
+      
+      console.log('🧪 TEST SAVE - Test data saved successfully!');
+      alert('Test data saved successfully! Check console for details.');
+      
+      // Update the current workspace state
+      setCurrentWorkspace(testWorkspace);
+      
+    } catch (error) {
+      console.error('🧪 TEST SAVE - Error saving test data:', error);
+      alert('Error saving test data: ' + error.message);
+    }
+  };
+
   return (
     <div className='bg-[#ffeabb] min-h-screen relative'>
         {/* Desk Pikachu image in bottom left */}
@@ -120,6 +152,22 @@ const Working = () => {
               🎨 Draw
             </button>
           </div>
+
+          {/* Test Save Button */}
+          <button
+            onClick={testSaveData}
+            className="backdrop-blur-sm bg-red-500 bg-opacity-20 rounded-full px-4 py-2 text-sm font-medium text-red-700 border border-red-300 border-opacity-30 hover:bg-red-500 hover:bg-opacity-30 transition-all duration-200"
+          >
+            🧪 Test Save
+          </button>
+        </div>
+
+        {/* Voice Assistant - Center */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30">
+          <VoiceAssistant 
+            onTranscript={(text) => console.log('Voice transcript:', text)}
+            onResponse={(response) => console.log('AI response:', response)}
+          />
         </div>
 
         {/* Free Text Writer - allows writing anywhere on the page */}
@@ -142,7 +190,6 @@ const Working = () => {
         {/* Navigation Dock */}
         <NavigationDock />
     </div>
-    
   )
 }
 

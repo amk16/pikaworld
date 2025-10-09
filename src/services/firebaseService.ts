@@ -1,5 +1,4 @@
 // Firebase service for autosave functionality
-import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
   doc, 
@@ -21,21 +20,11 @@ import {
 } from 'firebase/auth';
 import { authService } from './authService';
 
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyCIRZdpavne6MFQJmcTKSpQUtnZqmPJgP4",
-  authDomain: "pikaworld-67eb3.firebaseapp.com",
-  projectId: "pikaworld-67eb3",
-  storageBucket: "pikaworld-67eb3.firebasestorage.app",
-  messagingSenderId: "20702699625",
-  appId: "1:20702699625:web:46095756c3e03c446542f8",
-  measurementId: "G-8NPYW5ZJB7"
-};
+// Get the same Firebase app instance from authService
+const auth = getAuth();
+const db = getFirestore();
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+// TODO: Make it so that the CloudWorkspace can be indexed by userid
 
 export interface CloudWorkspace {
   id: string;
@@ -66,6 +55,8 @@ class FirebaseService {
       // Initialize auth service first
       await authService.initialize();
       this.currentUser = authService.getCurrentUser();
+
+      this.setupAuthListener();
       
       if (!this.currentUser) {
         throw new Error('No user authenticated');
@@ -78,7 +69,17 @@ class FirebaseService {
       throw error;
     }
   }
-
+  // Add this after the initialize() method in FirebaseService class
+private setupAuthListener(): void {
+  onAuthStateChanged(auth, (user) => {
+    this.currentUser = user;
+    if (user) {
+      console.log('Firebase service: User signed in:', user.uid);
+    } else {
+      console.log('Firebase service: User signed out');
+    }
+  });
+}
   // Get current user
   getCurrentUser(): User | null {
     return this.currentUser;
@@ -102,7 +103,8 @@ class FirebaseService {
     }
 
     try {
-      console.log('Autosaving workspace to Firebase:', workspace.id);
+      console.log('🔥 FIREBASE AUTOSAVE - Workspace ID:', workspace.id);
+      console.log('🔥 FIREBASE AUTOSAVE - Raw workspace data:', workspace);
       
       const workspaceRef = doc(db, 'workspaces', workspace.id);
       const workspaceData = {
@@ -111,11 +113,15 @@ class FirebaseService {
         updatedAt: serverTimestamp()
       };
       
+      console.log('🔥 FIREBASE AUTOSAVE - Final data being saved:', workspaceData);
+      console.log('🔥 FIREBASE AUTOSAVE - Text content length:', workspaceData.textContent?.length || 0);
+      console.log('🔥 FIREBASE AUTOSAVE - Drawing data:', workspaceData.drawingData ? 'Present' : 'None');
+      
       await setDoc(workspaceRef, workspaceData, { merge: true });
       
-      console.log('Workspace autosaved successfully:', workspace.id);
+      console.log('🔥 FIREBASE AUTOSAVE - Successfully saved to Firebase:', workspace.id);
     } catch (error) {
-      console.error('Error autosaving workspace:', error);
+      console.error('🔥 FIREBASE AUTOSAVE - Error saving workspace:', error);
       // Don't throw error for autosave - just log it
     }
   }

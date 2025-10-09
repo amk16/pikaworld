@@ -1,7 +1,7 @@
 // Enhanced authentication service with email/password support
+import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
-  signInAnonymously, 
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
@@ -10,29 +10,35 @@ import {
   updateProfile
 } from 'firebase/auth';
 
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyCIRZdpavne6MFQJmcTKSpQUtnZqmPJgP4",
+  authDomain: "pikaworld-67eb3.firebaseapp.com",
+  projectId: "pikaworld-67eb3",
+  storageBucket: "pikaworld-67eb3.firebasestorage.app",
+  messagingSenderId: "20702699625",
+  appId: "1:20702699625:web:46095756c3e03c446542f8",
+  measurementId: "G-8NPYW5ZJB7"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
 class AuthService {
   private currentUser: User | null = null;
   private isInitialized = false;
 
   // Initialize authentication
   async initialize(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      onAuthStateChanged(getAuth(), async (user) => {
+    return new Promise((resolve) => {
+      onAuthStateChanged(auth, (user) => {
         this.currentUser = user;
         
-        if (!user) {
-          // No user signed in, sign in anonymously
-          try {
-            const result = await signInAnonymously(getAuth());
-            this.currentUser = result.user;
-            console.log('Anonymous user created:', result.user.uid);
-          } catch (error) {
-            console.error('Error signing in anonymously:', error);
-            reject(error);
-            return;
-          }
-        } else {
+        if (user) {
           console.log('User authenticated:', user.uid, user.isAnonymous ? '(anonymous)' : '(email)');
+        } else {
+          console.log('No user authenticated - please sign in');
         }
         
         this.isInitialized = true;
@@ -59,7 +65,7 @@ class AuthService {
   // Sign up with email and password
   async signUp(email: string, password: string, displayName?: string): Promise<User> {
     try {
-      const result = await createUserWithEmailAndPassword(getAuth(), email, password);
+      const result = await createUserWithEmailAndPassword(auth, email, password);
       
       if (displayName) {
         await updateProfile(result.user, { displayName });
@@ -76,7 +82,7 @@ class AuthService {
   // Sign in with email and password
   async signIn(email: string, password: string): Promise<User> {
     try {
-      const result = await signInWithEmailAndPassword(getAuth(), email, password);
+      const result = await signInWithEmailAndPassword(auth, email, password);
       console.log('User signed in:', result.user.uid);
       return result.user;
     } catch (error) {
@@ -88,7 +94,7 @@ class AuthService {
   // Sign out
   async signOut(): Promise<void> {
     try {
-      await signOut(getAuth());
+      await signOut(auth);
       console.log('User signed out');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -98,7 +104,7 @@ class AuthService {
 
   // Get user display name
   getUserDisplayName(): string {
-    if (!this.currentUser) return 'Anonymous User';
+    if (!this.currentUser) return 'Guest';
     
     if (this.currentUser.isAnonymous) {
       return 'Anonymous User';

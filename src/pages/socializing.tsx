@@ -20,7 +20,6 @@ const Socializing = () => {
         {/* Navigation Dock */}
         <NavigationDock />
     </div>
-    
   )
 }
 

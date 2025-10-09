@@ -28,7 +28,6 @@ const Gyming = () => {
         {/* Navigation Dock */}
         <NavigationDock />
     </div>
-    
   )
 }
 

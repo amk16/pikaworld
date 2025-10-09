@@ -69,11 +69,17 @@ class EnhancedWorkspaceService {
 
   // Update workspace text with autosave
   async updateWorkspaceText(workspaceId: string, textContent: string): Promise<void> {
+    console.log('📝 TEXT UPDATE - Workspace ID:', workspaceId);
+    console.log('📝 TEXT UPDATE - New text content length:', textContent.length);
+    console.log('📝 TEXT UPDATE - Text preview:', textContent.substring(0, 100) + '...');
     await this.updateWorkspace(workspaceId, { textContent });
   }
 
   // Update workspace drawing with autosave
   async updateWorkspaceDrawing(workspaceId: string, drawingData: any): Promise<void> {
+    console.log('🎨 DRAWING UPDATE - Workspace ID:', workspaceId);
+    console.log('🎨 DRAWING UPDATE - Drawing data:', drawingData);
+    console.log('🎨 DRAWING UPDATE - Drawing data size:', drawingData ? JSON.stringify(drawingData).length + ' chars' : 'None');
     await this.updateWorkspace(workspaceId, { drawingData });
   }
 
@@ -112,7 +118,8 @@ class EnhancedWorkspaceService {
     this.autosaveStatus.isAutosaving = true;
     
     try {
-      console.log('Autosaving workspace to cloud:', workspace.id);
+      console.log('☁️ ENHANCED SERVICE - Preparing workspace for cloud autosave:', workspace.id);
+      console.log('☁️ ENHANCED SERVICE - Local workspace data:', workspace);
       
       const cloudWorkspace: CloudWorkspace = {
         id: workspace.id,
@@ -124,11 +131,15 @@ class EnhancedWorkspaceService {
         updatedAt: Timestamp.fromDate(new Date(workspace.updatedAt))
       };
       
+      console.log('☁️ ENHANCED SERVICE - Cloud workspace data prepared:', cloudWorkspace);
+      console.log('☁️ ENHANCED SERVICE - Text content preview:', cloudWorkspace.textContent?.substring(0, 100) + '...');
+      console.log('☁️ ENHANCED SERVICE - Drawing data size:', cloudWorkspace.drawingData ? JSON.stringify(cloudWorkspace.drawingData).length + ' chars' : 'None');
+      
       await firebaseService.autosaveWorkspace(cloudWorkspace);
       this.autosaveStatus.lastAutosave = new Date();
-      console.log('Workspace autosaved successfully');
+      console.log('☁️ ENHANCED SERVICE - Workspace autosaved successfully');
     } catch (error) {
-      console.error('Error autosaving workspace to cloud:', error);
+      console.error('☁️ ENHANCED SERVICE - Error autosaving workspace to cloud:', error);
     } finally {
       this.autosaveStatus.isAutosaving = false;
     }
